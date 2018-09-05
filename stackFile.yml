@@ -1,0 +1,83 @@
+version: '1.0'
+services:
+  - name: db
+    type: mariadb
+    version: 10.3
+    configuration: StandAlone
+    username: faveo
+    # Ask password on create
+    userPassword: null
+    password: null
+    ports:
+      - 3306
+    remoteAccess: false
+    comments:
+      userPassword: Password for user "faveo"
+    deployTo:
+      - faveo
+
+  - name: faveo
+    type: docker
+    image: ladybirdweb/faveo-docker
+    version: latest
+    ports:
+      - 80
+    remoteAccess: false
+    globalDeps: |
+      sed -i "s/GPCS/EGPCS/" /etc/php/7.1/fpm/php.ini
+    initialCommands: |
+      cd /usr/share/nginx
+      DB_INSTALL=0 php artisan migrate --force
+      DB_INSTALL=0 php artisan db:seed --force
+    volumes:
+      - directory: /usr/share/nginx/public/uploads
+      - directory: /usr/share/nginx/public/uploads/company
+      - directory: /usr/share/nginx/public/uploads/profilepic
+      - directory: /usr/share/nginx/storage/framework/sessions
+    volumesUID: 33
+    env:
+      ADMIN_LOGIN: null
+      ADMIN_PASSWORD: null
+    configFiles:
+      - dest: /usr/share/nginx/database/seeds/UserSeeder.php
+        src: ./configs/userseeder.php
+      - dest: /usr/share/nginx/.env
+        src: ./configs/.env
+    deployTo:
+      - faveo
+
+  # - name: pma
+  #   type: php
+  #   version: 7.1
+  #   source:
+  #     type: git
+  #     url: https://github.com/phpmyadmin/phpmyadmin
+  #   extensions:
+  #     - mysqli
+  #     - opcache
+  #   configFiles:
+  #     - dest: $MAIN_PATH/config.inc.php
+  #       src: ./configs/config.inc.php
+  #   localDeps: composer install
+  #   deployTo:
+  #     - ghost
+
+  - name: web
+    type: nginx
+    version: 1.14
+    ports:
+      - 80
+      - 443
+    remoteAccess: true
+    serviceFiles:
+      - name: faveo
+    # - name: pma
+    #   static: true
+    deployTo:
+      - faveo
+
+hosts:
+  - name: faveo
+    requirements:
+      cores: 1
+      memory: 1
