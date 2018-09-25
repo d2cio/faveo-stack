@@ -4,8 +4,8 @@ services:
     type: mariadb
     version: 10.3
     configuration: StandAlone
+    database: faveo
     username: faveo
-    # Ask password on create
     userPassword: null
     password: null
     ports:
